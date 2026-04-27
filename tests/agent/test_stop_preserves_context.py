@@ -109,7 +109,7 @@ async def test_dispatch_cancellation_restores_checkpoint():
          patch("nanobot.agent.loop.SessionManager"), \
          patch("nanobot.agent.loop.SubagentManager") as MockSubMgr:
         MockSubMgr.return_value.cancel_by_session = AsyncMock(return_value=0)
-        loop = AgentLoop(bus=bus, provider=provider, workspace=workspace)
+        loop = AgentLoop(bus=bus, provider=provider, workspace=workspace, memory_plugin=MagicMock())
 
     checkpoint_key = loop._RUNTIME_CHECKPOINT_KEY
     session = SimpleNamespace(

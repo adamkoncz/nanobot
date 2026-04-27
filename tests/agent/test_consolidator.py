@@ -12,9 +12,11 @@ from nanobot.agent.memory import (
 )
 
 
+from nanobot.memory.file_plugin import FileMemoryPlugin
+
 @pytest.fixture
 def store(tmp_path):
-    return MemoryStore(tmp_path)
+    return FileMemoryPlugin(tmp_path)
 
 
 @pytest.fixture

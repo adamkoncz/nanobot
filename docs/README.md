@@ -27,6 +27,7 @@ Use these when you want deeper customization, integration, or extension details.
 | Topic | Repo docs | What it covers |
 |---|---|---|
 | Memory | [`memory.md`](./memory.md) | How nanobot stores, consolidates, and restores memory |
+| Custom Memory Plugins | [`memory-plugins.md`](./memory-plugins.md) | Replace the default memory with custom database backends |
 | Python SDK | [`python-sdk.md`](./python-sdk.md) | Use nanobot programmatically from Python |
 | Channel plugin guide | [`channel-plugin-guide.md`](./channel-plugin-guide.md) | Build and test custom chat channel plugins |
 | WebSocket channel | [`websocket.md`](./websocket.md) | Real-time WebSocket access and protocol details |

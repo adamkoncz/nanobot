@@ -112,6 +112,10 @@ The difference is philosophical as much as technical:
 - `history.jsonl` is for structure
 - `SOUL.md`, `USER.md`, and `MEMORY.md` are for meaning
 
+## Custom Memory Plugins
+
+If you want to replace nanobot's default file-based memory architecture (e.g., to use a vector database, PostgreSQL, or a cloud API), you can configure a custom memory plugin. See the [Custom Memory Plugins](./memory-plugins.md) guide for details on how to build and configure your own.
+
 ## Commands
 
 Memory is not hidden behind the curtain. Users can inspect and guide it.

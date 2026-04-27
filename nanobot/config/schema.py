@@ -98,6 +98,14 @@ class AgentDefaults(Base):
         serialization_alias="consolidationRatio",
     )  # Consolidation target ratio (0.5 = 50% of budget retained after compression)
     dream: DreamConfig = Field(default_factory=DreamConfig)
+    memory_plugin: str | None = Field(
+        default=None,
+        description=(
+            "Dotted import path to a MemoryPlugin subclass, e.g. "
+            "'mypackage.sql_memory:SQLMemoryPlugin'. "
+            "Defaults to the built-in FileMemoryPlugin."
+        ),
+    )
 
 
 class AgentsConfig(Base):

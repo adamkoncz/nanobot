@@ -7,7 +7,8 @@ from importlib.resources import files as pkg_files
 from pathlib import Path
 from typing import Any
 
-from nanobot.agent.memory import MemoryStore
+from nanobot.memory.base import MemoryPlugin
+from nanobot.memory.file_plugin import FileMemoryPlugin
 from nanobot.agent.skills import SkillsLoader
 from nanobot.utils.helpers import build_assistant_message, current_time_str, detect_image_mime, truncate_text
 from nanobot.utils.prompt_templates import render_template
@@ -22,10 +23,16 @@ class ContextBuilder:
     _MAX_HISTORY_CHARS = 32_000  # hard cap on recent history section size
     _RUNTIME_CONTEXT_END = "[/Runtime Context]"
 
-    def __init__(self, workspace: Path, timezone: str | None = None, disabled_skills: list[str] | None = None):
+    def __init__(
+        self,
+        workspace: Path,
+        timezone: str | None = None,
+        disabled_skills: list[str] | None = None,
+        memory_plugin: MemoryPlugin | None = None,
+    ):
         self.workspace = workspace
         self.timezone = timezone
-        self.memory = MemoryStore(workspace)
+        self.memory: MemoryPlugin = memory_plugin or FileMemoryPlugin(workspace)
         self.skills = SkillsLoader(workspace, disabled_skills=set(disabled_skills) if disabled_skills else None)
 
     def build_system_prompt(
@@ -40,9 +47,10 @@ class ContextBuilder:
         if bootstrap:
             parts.append(bootstrap)
 
-        memory = self.memory.get_memory_context()
-        if memory and not self._is_template_content(self.memory.read_memory(), "memory/MEMORY.md"):
-            parts.append(f"# Memory\n\n{memory}")
+        long_term = self.memory.read_memory()
+        memory_ctx = f"## Long-term Memory\n{long_term}" if long_term else ""
+        if memory_ctx and not self._is_template_content(long_term, "memory/MEMORY.md"):
+            parts.append(f"# Memory\n\n{memory_ctx}")
 
         always_skills = self.skills.get_always_skills()
         if always_skills:

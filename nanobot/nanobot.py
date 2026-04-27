@@ -9,6 +9,17 @@ from typing import Any
 from nanobot.agent.hook import AgentHook
 from nanobot.agent.loop import AgentLoop
 from nanobot.bus.queue import MessageBus
+from nanobot.memory.base import MemoryPlugin
+from nanobot.memory.file_plugin import FileMemoryPlugin
+from nanobot.utils.import_utils import import_from_dotted_path
+
+
+def _resolve_memory_plugin(config: Any, workspace: Path) -> MemoryPlugin:
+    spec = getattr(config.agents.defaults, "memory_plugin", None)
+    if not spec:
+        return FileMemoryPlugin(workspace)
+    cls = import_from_dotted_path(spec)
+    return cls(workspace)
 
 
 @dataclass(slots=True)
@@ -66,10 +77,13 @@ class Nanobot:
         bus = MessageBus()
         defaults = config.agents.defaults
 
+        memory_plugin = _resolve_memory_plugin(config, Path(defaults.workspace))
+
         loop = AgentLoop(
             bus=bus,
             provider=provider,
             workspace=config.workspace_path,
+            memory_plugin=memory_plugin,
             model=defaults.model,
             max_iterations=defaults.max_tool_iterations,
             context_window_tokens=defaults.context_window_tokens,

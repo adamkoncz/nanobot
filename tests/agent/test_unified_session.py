@@ -40,7 +40,7 @@ def _make_loop(tmp_path: Path, unified_session: bool = False) -> AgentLoop:
 
     with patch("nanobot.agent.loop.SessionManager"), \
          patch("nanobot.agent.loop.SubagentManager") as MockSubMgr, \
-         patch("nanobot.agent.loop.Dream"):
+         patch("nanobot.agent.memory.Dream"):
         MockSubMgr.return_value.cancel_by_session = AsyncMock(return_value=0)
         loop = AgentLoop(
             bus=bus,

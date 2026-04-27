@@ -123,7 +123,7 @@ async def cmd_dream(ctx: CommandContext) -> OutboundMessage:
     async def _run_dream():
         t0 = time.monotonic()
         try:
-            did_work = await loop.dream.run()
+            did_work = await loop.memory.dream()
             elapsed = time.monotonic() - t0
             if did_work:
                 content = f"Dream completed in {elapsed:.1f}s."
@@ -220,11 +220,20 @@ async def cmd_dream_log(ctx: CommandContext) -> OutboundMessage:
     Default: diff of the latest commit (HEAD~1 vs HEAD).
     With /dream-log <sha>: diff of that specific commit.
     """
-    store = ctx.loop.consolidator.store
-    git = store.git
+    memory = ctx.loop.memory
+    if not memory.is_versioned():
+        return OutboundMessage(
+            channel=ctx.msg.channel, chat_id=ctx.msg.chat_id,
+            content="Dream history is not available because memory versioning is not supported by the current memory plugin.",
+            metadata={"render_as": "text"},
+        )
+    
+    # We safely assume a versioned memory plugin exposes a git-like interface, 
+    # either directly or via an internal _store.
+    git = getattr(memory, "git", getattr(getattr(memory, "_store", None), "git", None))
 
-    if not git.is_initialized():
-        if store.get_last_dream_cursor() == 0:
+    if not git or not git.is_initialized():
+        if memory.get_last_dream_cursor() == 0:
             msg = "Dream has not run yet. Run `/dream`, or wait for the next scheduled Dream cycle."
         else:
             msg = "Dream history is not available because memory versioning is not initialized."
@@ -271,9 +280,15 @@ async def cmd_dream_restore(ctx: CommandContext) -> OutboundMessage:
         /dream-restore          — list recent commits
         /dream-restore <sha>    — revert a specific commit
     """
-    store = ctx.loop.consolidator.store
-    git = store.git
-    if not git.is_initialized():
+    memory = ctx.loop.memory
+    if not memory.is_versioned():
+        return OutboundMessage(
+            channel=ctx.msg.channel, chat_id=ctx.msg.chat_id,
+            content="Dream history is not available because memory versioning is not supported by the current memory plugin.",
+        )
+    
+    git = getattr(memory, "git", getattr(getattr(memory, "_store", None), "git", None))
+    if not git or not git.is_initialized():
         return OutboundMessage(
             channel=ctx.msg.channel, chat_id=ctx.msg.chat_id,
             content="Dream history is not available because memory versioning is not initialized.",

@@ -20,6 +20,10 @@ from nanobot.agent.runner import AgentRunSpec, AgentRunner
 from nanobot.agent.tools.registry import ToolRegistry
 from nanobot.utils.gitstore import GitStore
 
+from nanobot.memory.base import MemoryPlugin
+
+__all__ = ["MemoryStore", "Dream", "Consolidator", "MemoryPlugin"]
+
 if TYPE_CHECKING:
     from nanobot.providers.base import LLMProvider
     from nanobot.session.manager import Session, SessionManager
@@ -427,7 +431,7 @@ class Consolidator:
 
     def __init__(
         self,
-        store: MemoryStore,
+        store: MemoryPlugin,
         provider: LLMProvider,
         model: str,
         sessions: SessionManager,
@@ -557,7 +561,7 @@ class Consolidator:
             if response.finish_reason == "error":
                 raise RuntimeError(f"LLM returned error: {response.content}")
             summary = response.content or "[no summary]"
-            self.store.append_history(summary, max_chars=_ARCHIVE_SUMMARY_MAX_CHARS)
+            self.store.archive_summary(summary, max_chars=_ARCHIVE_SUMMARY_MAX_CHARS)
             return summary
         except Exception:
             logger.warning("Consolidation LLM call failed, raw-dumping to history")
