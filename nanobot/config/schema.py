@@ -37,6 +37,9 @@ class DreamConfig(Base):
 
     _HOUR_MS = 3_600_000
 
+    enabled: bool = True  # Enable/disable background dreaming
+    rem_enabled: bool = False  # Enable/disable REM phase specifically
+    rem_token_limit: int = 10000  # Max tokens allowed per REM session
     interval_h: int = Field(default=2, ge=1)  # Every 2 hours by default
     cron: str | None = Field(default=None, exclude=True)  # Legacy compatibility override
     model_override: str | None = Field(
