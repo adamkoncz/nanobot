@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
+from loguru import logger
+
 from nanobot.agent.memory import MemoryStore
 from nanobot.memory.base import MemoryPlugin
 
@@ -29,22 +31,33 @@ class CircadianMemoryPlugin(MemoryPlugin):
         self._provider: "LLMProvider | None" = None
         self._model = ""
 
+        # Dream configuration — populated by configure_dream() / gateway
+        self._rem_enabled: bool = False
+        self._rem_token_limit: int = 10_000
+        self._model_override: str | None = None
+
     # -- Long-term memory --
 
     def read_memory(self) -> str:
         """
         In Circadian mode, memory is distributed. For prompt injection,
-        we might compile a digest or return the root index.
+        we return the root index node's content (without frontmatter).
         """
-        index_file = self.vault_dir / "index.md"
-        if index_file.exists():
-            return index_file.read_text(encoding="utf-8")
-        return "Circadian Vault initialized."
+        try:
+            node = self.vault.read_node("index")
+            return node.content
+        except FileNotFoundError:
+            return "Circadian Vault initialized."
 
     def write_memory(self, content: str) -> None:
-        """Fallback for direct memory writes."""
-        index_file = self.vault_dir / "index.md"
-        index_file.write_text(content, encoding="utf-8")
+        """Fallback for direct memory writes — routes through the Vault."""
+        try:
+            existing = self.vault.read_node("index")
+            metadata = existing.metadata
+        except FileNotFoundError:
+            metadata = {"type": "index"}
+        self.vault.write_node("index", content, metadata)
+        self.index.index_node("index", content, node_type="index")
 
     def read_soul(self) -> str:
         return self._store.read_soul()
@@ -100,35 +113,51 @@ class CircadianMemoryPlugin(MemoryPlugin):
         max_iterations: int | None = None,
         annotate_line_ages: bool | None = None,
     ) -> None:
-        # Save config for our sleep phases (to be implemented)
-        pass
+        if model_override is not None:
+            self._model_override = model_override
+            logger.debug(f"Circadian dream: model override set to {model_override}")
+        # max_batch_size, max_iterations, annotate_line_ages are not applicable
+        # to the Circadian model but we accept them silently for interface compat.
 
     def set_provider(self, provider: "LLMProvider", model: str) -> None:
         self._provider = provider
         self._model = model
 
+    def set_rem_config(self, *, enabled: bool, token_limit: int) -> None:
+        """Configure REM phase from DreamConfig."""
+        self._rem_enabled = enabled
+        self._rem_token_limit = token_limit
+
     async def dream(self) -> bool:
         """
         Run the Circadian sleep cycle (Light, Deep, REM).
         """
-        from nanobot.memory.circadian.phases import LightSleepPhase, DeepSleepPhase, REMSleepPhase
-        from loguru import logger
+        from nanobot.memory.circadian.phases.light import LightSleepPhase
+        from nanobot.memory.circadian.phases.deep import DeepSleepPhase
+        from nanobot.memory.circadian.phases.rem import REMSleepPhase
+        
+        model = self._model_override or self._model
         
         logger.info("Starting Circadian Sleep Cycle...")
         
-        # 1. Light Sleep
+        # 1. Light Sleep — ingest history into staging nodes
         light = LightSleepPhase(self)
         processed = await light.run()
         
-        # 2. Deep Sleep
+        # 2. Deep Sleep — promote staging into atomic concepts
         deep = DeepSleepPhase(self)
         promoted = await deep.run()
         
-        # 3. REM Sleep
-        # In a real setup, we would respect config.dreaming.rem_enabled
-        # and token limits here. For now we run it directly.
-        rem = REMSleepPhase(self)
-        await rem.run()
+        # 3. REM Sleep — creative synthesis (respects config)
+        if self._rem_enabled:
+            rem = REMSleepPhase(self, token_limit=self._rem_token_limit)
+            await rem.run()
+        else:
+            logger.debug("Circadian REM phase is disabled.")
         
         logger.info("Circadian Sleep Cycle completed.")
         return processed > 0 or promoted > 0
+
+    def close(self) -> None:
+        """Release resources (SQLite connection)."""
+        self.index.close()

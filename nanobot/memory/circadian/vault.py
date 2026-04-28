@@ -11,6 +11,25 @@ class VaultNode(NamedTuple):
     links: list[str]
 
 
+# Characters not allowed in node names — prevents path traversal and filesystem issues.
+_UNSAFE_NAME_RE = re.compile(r"[^a-z0-9_\-]")
+
+
+def sanitize_node_name(name: str) -> str:
+    """Normalise an arbitrary string into a safe, flat filename stem.
+
+    - Lowercases
+    - Replaces spaces with underscores
+    - Strips anything that isn't alphanumeric, underscore, or hyphen
+    - Collapses repeated underscores
+    - Returns empty string if nothing survives (caller must check)
+    """
+    slug = name.strip().lower().replace(" ", "_")
+    slug = _UNSAFE_NAME_RE.sub("", slug)
+    slug = re.sub(r"_+", "_", slug).strip("_")
+    return slug
+
+
 class Vault:
     """
     Manages atomic Markdown files with YAML frontmatter and [[Wikilinks]].
@@ -22,6 +41,13 @@ class Vault:
     def __init__(self, directory: Path):
         self.directory = directory
         self.directory.mkdir(parents=True, exist_ok=True)
+
+    def _resolve_path(self, name: str) -> Path:
+        """Resolve a node name to a file path, enforcing it stays within the vault."""
+        path = (self.directory / f"{name}.md").resolve()
+        if not str(path).startswith(str(self.directory.resolve())):
+            raise ValueError(f"Node name escapes vault directory: {name!r}")
+        return path
 
     def _parse_file(self, path: Path) -> VaultNode:
         if not path.exists():
@@ -52,12 +78,12 @@ class Vault:
 
     def read_node(self, name: str) -> VaultNode:
         """Reads a node by its name (without extension)."""
-        path = self.directory / f"{name}.md"
+        path = self._resolve_path(name)
         return self._parse_file(path)
 
     def write_node(self, name: str, content: str, metadata: dict[str, Any] | None = None) -> None:
         """Writes a node with optional frontmatter."""
-        path = self.directory / f"{name}.md"
+        path = self._resolve_path(name)
         
         output = ""
         if metadata:
@@ -73,6 +99,6 @@ class Vault:
         return [p.stem for p in self.directory.glob("*.md")]
         
     def delete_node(self, name: str) -> None:
-        path = self.directory / f"{name}.md"
+        path = self._resolve_path(name)
         if path.exists():
             path.unlink()
