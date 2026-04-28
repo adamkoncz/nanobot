@@ -1348,13 +1348,12 @@ def test_gateway_health_endpoint_binds_and_serves_expected_responses(
     config.gateway.port = 18791
     captured: dict[str, object] = {}
 
-    class _FakeDream:
-        model = None
-        max_batch_size = 0
-        max_iterations = 0
+    class _FakeMemoryPlugin:
+        def configure_dream(self, **_kwargs) -> None:
+            pass
 
-        async def run(self) -> None:
-            return None
+        async def dream(self) -> bool:
+            return False
 
     class _FakeSessionManager:
         def flush_all(self) -> int:
@@ -1363,7 +1362,7 @@ def test_gateway_health_endpoint_binds_and_serves_expected_responses(
     class _FakeAgentLoop:
         def __init__(self, **_kwargs) -> None:
             self.model = "test-model"
-            self.dream = _FakeDream()
+            self.memory = _FakeMemoryPlugin()
             self.sessions = _FakeSessionManager()
 
         async def run(self) -> None:

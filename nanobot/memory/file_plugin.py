@@ -67,7 +67,24 @@ class FileMemoryPlugin(MemoryPlugin):
         return content
 
     # -- The Dream Operation --
-    
+
+    def configure_dream(
+        self,
+        *,
+        model_override: str | None = None,
+        max_batch_size: int | None = None,
+        max_iterations: int | None = None,
+        annotate_line_ages: bool | None = None,
+    ) -> None:
+        if model_override is not None:
+            self._dream.model = model_override
+        if max_batch_size is not None:
+            self._dream.max_batch_size = max_batch_size
+        if max_iterations is not None:
+            self._dream.max_iterations = max_iterations
+        if annotate_line_ages is not None:
+            self._dream.annotate_line_ages = annotate_line_ages
+
     def set_provider(self, provider: 'nanobot.providers.base.LLMProvider', model: str) -> None:
         self._dream.set_provider(provider, model)
 

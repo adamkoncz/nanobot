@@ -82,9 +82,25 @@ class MemoryPlugin(ABC):
         ...
 
     # -- The Dream Operation --
-    
+
     def set_provider(self, provider: 'nanobot.providers.base.LLMProvider', model: str) -> None:
         """Inject LLM provider into the memory plugin for tasks like dreaming."""
+        pass
+
+    def configure_dream(
+        self,
+        *,
+        model_override: str | None = None,
+        max_batch_size: int | None = None,
+        max_iterations: int | None = None,
+        annotate_line_ages: bool | None = None,
+    ) -> None:
+        """Apply Dream-specific configuration.
+
+        Default is a no-op for plugins that don't support Dream or handle
+        it differently.  ``FileMemoryPlugin`` forwards these to its internal
+        ``Dream`` instance.
+        """
         pass
 
     @abstractmethod

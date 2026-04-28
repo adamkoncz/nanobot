@@ -705,7 +705,7 @@ def _run_gateway(
         # Dream is an internal job — run directly, not through the agent loop.
         if job.name == "dream":
             try:
-                await agent.dream.run()
+                await agent.memory.dream()
                 logger.info("Dream cron job completed")
             except Exception:
                 logger.exception("Dream cron job failed")
@@ -908,11 +908,12 @@ def _run_gateway(
             await server.serve_forever()
     # Register Dream system job (always-on, idempotent on restart)
     dream_cfg = config.agents.defaults.dream
-    if dream_cfg.model_override:
-        agent.dream.model = dream_cfg.model_override
-    agent.dream.max_batch_size = dream_cfg.max_batch_size
-    agent.dream.max_iterations = dream_cfg.max_iterations
-    agent.dream.annotate_line_ages = dream_cfg.annotate_line_ages
+    agent.memory.configure_dream(
+        model_override=dream_cfg.model_override,
+        max_batch_size=dream_cfg.max_batch_size,
+        max_iterations=dream_cfg.max_iterations,
+        annotate_line_ages=dream_cfg.annotate_line_ages,
+    )
     from nanobot.cron.types import CronJob, CronPayload
     cron.register_system_job(CronJob(
         id="dream",
