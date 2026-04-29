@@ -517,10 +517,15 @@ def serve(
     bus = MessageBus()
     provider = _make_provider(runtime_config)
     session_manager = SessionManager(runtime_config.workspace_path)
+
+    from nanobot.nanobot import _resolve_memory_plugin
+    memory_plugin = _resolve_memory_plugin(runtime_config, runtime_config.workspace_path)
+
     agent_loop = AgentLoop(
         bus=bus,
         provider=provider,
         workspace=runtime_config.workspace_path,
+        memory_plugin=memory_plugin,
         model=runtime_config.agents.defaults.model,
         max_iterations=runtime_config.agents.defaults.max_tool_iterations,
         context_window_tokens=runtime_config.agents.defaults.context_window_tokens,
@@ -628,11 +633,16 @@ def _run_gateway(
     cron_store_path = config.workspace_path / "cron" / "jobs.json"
     cron = CronService(cron_store_path)
 
+    # Resolve the configured memory plugin (Circadian, File, or custom)
+    from nanobot.nanobot import _resolve_memory_plugin
+    memory_plugin = _resolve_memory_plugin(config, config.workspace_path)
+
     # Create agent with cron service
     agent = AgentLoop(
         bus=bus,
         provider=provider,
         workspace=config.workspace_path,
+        memory_plugin=memory_plugin,
         model=provider_snapshot.model,
         max_iterations=config.agents.defaults.max_tool_iterations,
         context_window_tokens=provider_snapshot.context_window_tokens,
